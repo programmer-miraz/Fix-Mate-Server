@@ -46,6 +46,18 @@ app.post("/services", async (req, res) => {
     const result = await services.insertOne(serviceData);
     res.send(result);
 });
+
+//Technician my-services
+app.get("/my-services/:userId", async (req, res) => {
+    const userId = req.params.userId;
+
+    const result = await services.find({
+        technicianId: userId
+    }).toArray();
+
+    res.send(result);
+});
+
 app.post("/job", (req, res) => {
     res.send("Backend Server is Running!");
 })
