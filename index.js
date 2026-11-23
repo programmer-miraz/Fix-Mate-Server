@@ -25,15 +25,30 @@ export async function connectToMongoDB() {
         console.dir(err);
     }
 }
-const connectedDB = await connectToMongoDB()
-const database = connectedDB.db("Fix-Mate")
-// const users = database.collection("user")
+const connectedDb = await connectToMongoDB()
+const database = connectedDb.db("Fix-mate")
+const services = database.collection("services")
 
 
 // Default route
 app.get("/", (req, res) => {
     res.send("Backend Server is Running!");
 });
+// services cart home page
+app.get("/services",async (req, res) => {
+    const result =  await services.find({}).toArray()
+    res.send(result);
+});
+
+// Technician new service add from 
+app.post("/services", async (req, res) => {
+    const serviceData = req.body;
+    const result = await services.insertOne(serviceData);
+    res.send(result);
+});
+app.post("/job", (req, res) => {
+    res.send("Backend Server is Running!");
+})
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
