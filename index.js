@@ -2,7 +2,7 @@
 import express from "express";
 import cors from "cors";
 import 'dotenv/config'
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 // Express app create
 const app = express();
@@ -35,8 +35,8 @@ app.get("/", (req, res) => {
     res.send("Backend Server is Running!");
 });
 // services cart home page
-app.get("/services",async (req, res) => {
-    const result =  await services.find({}).toArray()
+app.get("/services", async (req, res) => {
+    const result = await services.find({}).toArray()
     res.send(result);
 });
 
@@ -47,7 +47,7 @@ app.post("/services", async (req, res) => {
     res.send(result);
 });
 
-//Technician my-services
+//Technician my-services get all service
 app.get("/my-services/:userId", async (req, res) => {
     const userId = req.params.userId;
 
@@ -58,9 +58,36 @@ app.get("/my-services/:userId", async (req, res) => {
     res.send(result);
 });
 
-app.post("/job", (req, res) => {
-    res.send("Backend Server is Running!");
-})
+
+
+
+// // Technician: turn a service's availability ON / OFF and edit 
+app.patch("/services/:id", async (req, res) => {
+    try {
+        const result = await services.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: req.body }
+        );
+
+        res.send(result);
+    } catch (error) {
+        res.status(400).send({ message: "Update failed" });
+    }
+});
+
+/// my-services delete 
+// Technician: Delete own service
+app.delete("/services/:id", async (req, res) => {
+    const { id } = req.params;
+    const result = await services.deleteOne({
+        _id: new ObjectId(id),
+    });
+    res.send(result)
+
+
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
