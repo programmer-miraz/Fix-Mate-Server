@@ -146,6 +146,8 @@ app.delete("/services/:id", async (req, res) => {
 
 
 });
+
+
 /// customre bookings 
 // Create Booking
 app.post("/bookings", async (req, res) => {
@@ -162,6 +164,25 @@ app.post("/bookings", async (req, res) => {
     }
 });
 
+
+// Get all bookings for a specific technician
+app.get("/bookings", async (req, res) => {
+
+        const { technicianEmail } = req.query;
+
+        if (!technicianEmail) {
+            return res.status(400).send({
+                message: "Technician email is required",
+            });
+        }
+        const result = await bookings.find({ technicianEmail: technicianEmail })
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        res.send(result);
+ 
+    
+});
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
