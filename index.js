@@ -28,16 +28,76 @@ export async function connectToMongoDB() {
 const connectedDb = await connectToMongoDB()
 const database = connectedDb.db("Fix-mate")
 const services = database.collection("services")
+const bookings = database.collection("bookings")
 
 
 // Default route
 app.get("/", (req, res) => {
     res.send("Backend Server is Running!");
 });
+
 // services cart home page
 app.get("/services", async (req, res) => {
-    const result = await services.find({}).toArray()
+    const { search, category, mode, sort } = req.query;
+
+    const query = {};
+
+    // Search by title or category
+    if (search) {
+        query.$or = [
+            { title: { $regex: search, $options: "i" } },
+            { category: { $regex: search, $options: "i" } }
+        ];
+    }
+
+    // Category filter
+    if (category) {
+        query.category = category;
+    }
+
+    // Service mode filter
+    if (mode) {
+        query.serviceMode = mode;
+    }
+
+    // Sorting
+    let sortOption = { createdAt: -1 };
+
+    if (sort === "price-asc") {
+        sortOption = { basePrice: 1 };
+    } else if (sort === "price-desc") {
+        sortOption = { basePrice: -1 };
+    }
+
+    const result = await services
+        .find({
+            ...query,
+            approvalStatus: "approved",
+            isAvailable: true
+        })
+        .sort(sortOption)
+        .toArray();
+
     res.send(result);
+});
+
+
+
+// Public service details by id
+app.get("/services/:id", async (req, res) => {
+    try {
+        const result = await services.findOne({
+            _id: new ObjectId(req.params.id)
+        });
+
+        if (!result) {
+            return res.status(404).send({ message: "Service not found" });
+        }
+
+        res.send(result);
+    } catch (error) {
+        res.status(400).send({ message: "Invalid service id" });
+    }
 });
 
 // Technician new service add from 
@@ -86,7 +146,21 @@ app.delete("/services/:id", async (req, res) => {
 
 
 });
+/// customre bookings 
+// Create Booking
+app.post("/bookings", async (req, res) => {
+    try {
+        const bookingData = req.body;
+        const result = await bookings.insertOne(bookingData);
+        res.send(result);
 
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            message: "Failed to create booking"
+        });
+    }
+});
 
 
 app.listen(PORT, () => {
