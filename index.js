@@ -184,21 +184,8 @@ app.get("/bookings", async (req, res) => {
 
 });
 
-// Technician: update a booking (status / final amount)
-app.patch("/bookings/:id", async (req, res) => {
-    try {
-        const result = await bookings.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: req.body }
-        );
-        res.send(result);
-    } catch (error) {
-        res.status(400).send({ message: "Booking update failed" });
-    }
-});
 
-
-
+///  Technician: update a booking (status / final amount)
 app.patch("/bookings/:id", async (req, res) => {
     const { id } = req.params;
     const { status, finalAmount } = req.body;
@@ -248,6 +235,15 @@ app.patch("/bookings/:id", async (req, res) => {
         message: "Booking status updated successfully",
     });
 });
+
+
+
+
+
+
+
+
+
 
 
 /// customer my-bookin page
