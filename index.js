@@ -165,23 +165,100 @@ app.post("/bookings", async (req, res) => {
 });
 
 
-// Get all bookings for a specific technician
+// Get requestes all bookings for a specific technician
 app.get("/bookings", async (req, res) => {
 
-        const { technicianEmail } = req.query;
+    const { technicianEmail } = req.query;
 
-        if (!technicianEmail) {
-            return res.status(400).send({
-                message: "Technician email is required",
-            });
-        }
-        const result = await bookings.find({ technicianEmail: technicianEmail })
-            .sort({ createdAt: -1 })
-            .toArray();
+    if (!technicianEmail) {
+        return res.status(400).send({
+            message: "Technician email is required",
+        });
+    }
+    const result = await bookings.find({ technicianEmail: technicianEmail })
+        .sort({ createdAt: -1 })
+        .toArray();
 
+    res.send(result);
+
+
+});
+
+// Technician: update a booking (status / final amount)
+app.patch("/bookings/:id", async (req, res) => {
+    try {
+        const result = await bookings.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: req.body }
+        );
         res.send(result);
- 
-    
+    } catch (error) {
+        res.status(400).send({ message: "Booking update failed" });
+    }
+});
+
+
+
+app.patch("/bookings/:id", async (req, res) => {
+    const { id } = req.params;
+    const { status, finalAmount } = req.body;
+
+    if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ message: "Invalid booking ID" });
+    }
+
+    const booking = await bookings.findOne({
+        _id: new ObjectId(id),
+    });
+
+    if (!booking) {
+        return res.status(404).send({ message: "Booking not found" });
+    }
+
+    const allowedTransitions = {
+        requested: ["accepted", "rejected"],
+        accepted: ["in-progress"],
+        "in-progress": ["completed"],
+    };
+
+    if (!allowedTransitions[booking.status]?.includes(status)) {
+        return res.status(400).send({ message: "Invalid status transition" });
+    }
+
+    if (status === "completed" && (!Number.isFinite(finalAmount) || finalAmount <= 0)) {
+        return res.status(400).send({ message: "Valid final amount is required" });
+    }
+
+    const updateData = {
+        status,
+        updatedAt: new Date(),
+    };
+
+    if (status === "completed") {
+        updateData.finalAmount = finalAmount;
+    }
+
+    const result = await bookings.updateOne(
+        { _id: new ObjectId(id), status: booking.status },
+        { $set: updateData }
+    );
+
+    res.send({
+        success: true,
+        message: "Booking status updated successfully",
+    });
+});
+
+
+/// customer my-bookin page
+app.get("/bookings/my", async (req, res) => {
+    const { email } = req.query;
+
+    const result = await bookings.find({
+        customerEmail: email
+    }).toArray();
+
+    res.send(result);
 });
 
 app.listen(PORT, () => {
