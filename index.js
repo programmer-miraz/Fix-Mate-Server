@@ -238,14 +238,6 @@ app.patch("/bookings/:id", async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
 /// customer my-bookin page
 app.get("/bookings/my", async (req, res) => {
     const { email } = req.query;
@@ -255,7 +247,42 @@ app.get("/bookings/my", async (req, res) => {
     }).toArray();
 
     res.send(result);
+})
+
+//customer request cencel korte parbe 
+app.patch("/bookings/:id/cancel", async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    const result = await bookings.updateOne(
+        {
+            _id: new ObjectId(id),
+            customerEmail: email,
+            status: "requested",
+        },
+        {
+            $set: {
+                status: "cancelled",
+                updatedAt: new Date(),
+            },
+        }
+    );
+
+    if (result.matchedCount === 0) {
+        return res.status(404).send({
+            message: "Booking not found or cannot be cancelled",
+        });
+    }
+
+    res.send({
+        success: true,
+        message: "Booking cancelled successfully",
+    });
 });
+
+
+
+
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
