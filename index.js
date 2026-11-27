@@ -358,13 +358,13 @@ app.get("/customer-dashboard/:email", async (req, res) => {
             },
         ]).toArray();
 
-        const totalSpent = paymentResult[0]?.totalSpent || 0;
+
 
         res.status(200).send({
             totalBookings,
             pendingBookings,
             completedBookings,
-            totalSpent,
+
         });
 
     } catch (error) {
@@ -372,6 +372,73 @@ app.get("/customer-dashboard/:email", async (req, res) => {
 
         res.status(500).send({
             message: "Failed to fetch customer dashboard data",
+        });
+    }
+});
+/// Technician dashboard api
+// Technician Dashboard Statistics
+app.get("/technician-dashboard/:email", async (req, res) => {
+    try {
+        const { email } = req.params;
+        // Total services
+        const totalServices = await services.countDocuments({
+            technicianEmail: email,
+        });
+        // Approved services
+        const approvedServices = await services.countDocuments({
+            technicianEmail: email,
+            approvalStatus: "approved",
+        });
+
+        // Total bookings
+        const totalBookings = await bookings.countDocuments({
+            technicianEmail: email,
+        });
+
+        // Pending bookings
+        const pendingBookings = await bookings.countDocuments({
+            technicianEmail: email,
+            status: "pending",
+        });
+
+        // Completed bookings
+        const completedBookings = await bookings.countDocuments({
+            technicianEmail: email,
+            status: "completed",
+        });
+
+        // Total earnings from paid payments
+        const paymentResult = await payments.aggregate([
+            {
+                $match: {
+                    technicianEmail: email,
+                    paymentStatus: "paid",
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalEarnings: { $sum: "$amount" },
+                },
+            },
+        ]).toArray();
+
+        const totalEarnings = paymentResult[0]?.totalEarnings || 0;
+
+        res.status(200).send({
+            totalServices,
+            approvedServices,
+            totalBookings,
+            pendingBookings,
+            completedBookings,
+            totalEarnings,
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+            message: "Failed to fetch technician dashboard data",
         });
     }
 });
