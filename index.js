@@ -3,6 +3,9 @@ import express from "express";
 import cors from "cors";
 import 'dotenv/config'
 import { MongoClient, ObjectId } from "mongodb";
+import Stripe from "stripe";
+import paymentRoutes from "./routes/paymentRoutes.js";
+
 
 // Express app create
 const app = express();
@@ -10,11 +13,25 @@ const PORT = 5000;
 
 
 // Middleware
-app.use(cors());
+app.use(
+    cors({
+        origin: process.env.CLIENT_URL,
+        credentials: true,
+    })
+);
 app.use(express.json());
+app.use(
+    "/api/payments/webhook",
+    express.raw({ type: "application/json" })
+);
+app.use("/api/payments", paymentRoutes);
+
+
 
 // MongoDB connection
 const client = new MongoClient(process.env.MONGO_DB_CLIENT_URI);
+//payment strip connection
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function connectToMongoDB() {
     try {
@@ -28,7 +45,8 @@ export async function connectToMongoDB() {
 const connectedDb = await connectToMongoDB()
 const database = connectedDb.db("Fix-mate")
 const services = database.collection("services")
-const bookings = database.collection("bookings")
+export const bookings = database.collection("bookings")
+export const payments = database.collection("payments");
 
 
 // Default route
@@ -279,6 +297,7 @@ app.patch("/bookings/:id/cancel", async (req, res) => {
         message: "Booking cancelled successfully",
     });
 });
+
 
 
 
