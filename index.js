@@ -324,6 +324,59 @@ app.get("/payments/:email", async (req, res) => {
     }
 });
 
+/// customer dashboard get api-booking
+app.get("/customer-dashboard/:email", async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        const totalBookings = await bookings.countDocuments({
+            customerEmail: email,
+        });
+
+        const pendingBookings = await bookings.countDocuments({
+            customerEmail: email,
+            status: "pending",
+        });
+
+        const completedBookings = await bookings.countDocuments({
+            customerEmail: email,
+            status: "completed",
+        });
+
+        const paymentResult = await payments.aggregate([
+            {
+                $match: {
+                    customerEmail: email,
+                    paymentStatus: "paid",
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalSpent: { $sum: "$amount" },
+                },
+            },
+        ]).toArray();
+
+        const totalSpent = paymentResult[0]?.totalSpent || 0;
+
+        res.status(200).send({
+            totalBookings,
+            pendingBookings,
+            completedBookings,
+            totalSpent,
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+            message: "Failed to fetch customer dashboard data",
+        });
+    }
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
