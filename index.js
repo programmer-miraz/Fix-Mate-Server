@@ -412,7 +412,7 @@ app.get("/technician-dashboard/:email", async (req, res) => {
             {
                 $match: {
                     technicianEmail: email,
-                    paymentStatus: "paid",
+                    status: "paid",
                 },
             },
             {
@@ -443,6 +443,96 @@ app.get("/technician-dashboard/:email", async (req, res) => {
     }
 });
 
+
+///Admin role change api
+// Get all users
+app.get("/admin/users", async (req, res) => {
+    try {
+        const usersData = await users
+            .find({})
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        res.status(200).send(usersData);
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+            message: "Failed to fetch users",
+        });
+    }
+});
+
+
+
+// Update user role
+app.patch("/admin/users/:id/role", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, adminEmail } = req.body;
+
+        const allowedRoles = ["customer", "technician", "admin"];
+
+        if (!allowedRoles.includes(role)) {
+            return res.status(400).send({
+                message: "Invalid role",
+            });
+        }
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).send({
+                message: "Invalid user ID",
+            });
+        }
+
+        // Check admin
+        const admin = await users.findOne({
+            email: adminEmail,
+            role: "admin",
+        });
+
+        if (!admin) {
+            return res.status(403).send({
+                message: "Only admin can update user roles",
+            });
+        }
+
+        // Prevent admin from changing their own role
+        const targetUser = await users.findOne({
+            _id: new ObjectId(id),
+        });
+
+        if (!targetUser) {
+            return res.status(404).send({
+                message: "User not found",
+            });
+        }
+
+        if (targetUser.email === adminEmail) {
+            return res.status(403).send({
+                message: "You cannot change your own role",
+            });
+        }
+
+        const result = await users.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { role } }
+        );
+
+        res.status(200).send({
+            success: true,
+            message: "User role updated successfully",
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+            message: "Failed to update user role",
+        });
+    }
+});
 
 
 app.listen(PORT, () => {
