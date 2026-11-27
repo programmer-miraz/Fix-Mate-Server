@@ -31,7 +31,7 @@ app.use("/api/payments", paymentRoutes);
 // MongoDB connection
 const client = new MongoClient(process.env.MONGO_DB_CLIENT_URI);
 //payment strip connection
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 
 export async function connectToMongoDB() {
     try {
@@ -298,9 +298,31 @@ app.patch("/bookings/:id/cancel", async (req, res) => {
     });
 });
 
+// customer paymet history 
+// Get customer payment history
+app.get("/payments/:email", async (req, res) => {
+    try {
+        const { email } = req.params;
 
+        const paymentsData = await payments
+            .find({ customerEmail: email })
+            .sort({ paidAt: -1 })
+            .toArray();
 
+        res.status(200).send({
+            success: true,
+            payments: paymentsData,
+        });
 
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+            success: false,
+            message: "Failed to fetch payment history",
+        });
+    }
+});
 
 
 app.listen(PORT, () => {
