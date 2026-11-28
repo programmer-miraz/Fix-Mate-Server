@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import 'dotenv/config'
 import { MongoClient, ObjectId } from "mongodb";
-import Stripe from "stripe";
+
 import paymentRoutes from "./routes/paymentRoutes.js";
 
 
@@ -44,6 +44,7 @@ export async function connectToMongoDB() {
 }
 const connectedDb = await connectToMongoDB()
 const database = connectedDb.db("Fix-mate")
+const users = database.collection("user")
 const services = database.collection("services")
 export const bookings = database.collection("bookings")
 export const payments = database.collection("payments");
@@ -448,11 +449,7 @@ app.get("/technician-dashboard/:email", async (req, res) => {
 // Get all users
 app.get("/admin/users", async (req, res) => {
     try {
-        const usersData = await users
-            .find({})
-            .sort({ createdAt: -1 })
-            .toArray();
-
+        const usersData = await users.find({}).sort({ createdAt: -1 }).toArray();
         res.status(200).send(usersData);
 
     } catch (error) {
@@ -466,7 +463,7 @@ app.get("/admin/users", async (req, res) => {
 
 
 
-// Update user role
+//Admin Update user role-
 app.patch("/admin/users/:id/role", async (req, res) => {
     try {
         const { id } = req.params;
@@ -533,11 +530,82 @@ app.patch("/admin/users/:id/role", async (req, res) => {
         });
     }
 });
+/// admin technician er service approved or korte parbe
+// Admin - Get all services
+app.get("/admin/services", async (req, res) => {
+    const servicesData = await services
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+    res.status(200).send(servicesData);
+});
+/// admin technician er service approved or korte parbe
+
+
+
+// Admin - Update service approval status
+app.patch("/admin/services/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { approvalStatus } = req.body;
+
+    const allowedStatus = ["approved", "rejected"];
+
+    if (!allowedStatus.includes(approvalStatus)) {
+        return res.status(400).send({
+            success: false,
+            message: "Invalid approval status",
+        });
+    }
+
+    if (!ObjectId.isValid(id)) {
+        return res.status(400).send({
+            success: false,
+            message: "Invalid service ID",
+        });
+    }
+
+    const service = await services.findOne({
+        _id: new ObjectId(id),
+    });
+
+    if (!service) {
+        return res.status(404).send({
+            success: false,
+            message: "Service not found",
+        });
+    }
+
+    const result = await services.updateOne(
+        { _id: new ObjectId(id) },
+        {
+            $set: {
+                approvalStatus,
+                updatedAt: new Date(),
+            },
+        }
+    );
+
+    if (result.modifiedCount === 0) {
+        return res.status(400).send({
+            success: false,
+            message: "Service status was not changed",
+        });
+    }
+
+    res.status(200).send({
+        success: true,
+        message: `Service ${approvalStatus} successfully`,
+    });
+});
+
 
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
 });
+
+
 
 
 
