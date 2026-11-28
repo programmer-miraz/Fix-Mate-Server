@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import 'dotenv/config'
 import { MongoClient, ObjectId } from "mongodb";
+import { jwtVerify, createRemoteJWKSet } from "jose";
+
 
 import paymentRoutes from "./routes/paymentRoutes.js";
 
@@ -48,6 +50,47 @@ const users = database.collection("user")
 const services = database.collection("services")
 export const bookings = database.collection("bookings")
 export const payments = database.collection("payments");
+
+
+// verify token
+export const verifyToken = async (req, res, next) => {
+    const authHeaders = req.headers.authorization;
+
+    if (!authHeaders) {
+        return res.status(401).send({ message: "Unauthorized" });
+    }
+
+    try {
+        const token = authHeaders.split(" ")[1];
+
+        const JWKS = createRemoteJWKSet(
+            new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+        );
+
+        const { payload } = await jwtVerify(token, JWKS);
+        console.log("Verified User:", payload);
+
+
+        next();
+
+    } catch (error) {
+        return res.status(401).send({
+            message: "Invalid or expired token"
+        });
+    }
+};
+/// veryfiCutomer
+export const verifyCustomer = (req, res, next) => {
+    if (req.user.role !== "customer") {
+        return res.status(403).send({
+            message: "Forbidden access"
+        });
+    }
+
+    next();
+};
+
+
 
 
 // Default route
@@ -169,7 +212,7 @@ app.delete("/services/:id", async (req, res) => {
 
 /// customre bookings 
 // Create Booking
-app.post("/bookings", async (req, res) => {
+app.post("/bookings", verifyToken, verifyCustomer,async (req, res) => {
     try {
         const bookingData = req.body;
         const result = await bookings.insertOne(bookingData);
@@ -258,7 +301,7 @@ app.patch("/bookings/:id", async (req, res) => {
 
 
 /// customer my-bookin page
-app.get("/bookings/my", async (req, res) => {
+app.get("/bookings/my",verifyToken, verifyCustomer, async (req, res) => {
     const { email } = req.query;
 
     const result = await bookings.find({
@@ -269,7 +312,7 @@ app.get("/bookings/my", async (req, res) => {
 })
 
 //customer request cencel korte parbe 
-app.patch("/bookings/:id/cancel", async (req, res) => {
+app.patch("/bookings/:id/cancel",verifyToken, verifyCustomer, async (req, res) => {
     const { id } = req.params;
     const { email } = req.body;
 
@@ -631,6 +674,34 @@ app.get("/admin-dashboard", async (req, res) => {
         totalRevenue: revenueData[0]?.totalRevenue || 0
     });
 });
+
+// Update User Profile
+app.patch("/users/:id", async (req, res) => {
+    const { id } = req.params;
+    const { name, phone, area, bio, image } = req.body;
+
+    const result = await users.updateOne(
+        { _id: new ObjectId(id) },
+        {
+            $set: {
+                name,
+                phone,
+                area,
+                bio,
+                image,
+                updatedAt: new Date(),
+            },
+        }
+    );
+
+    res.send({
+        success: true,
+        message: "Profile updated successfully",
+        result,
+    });
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
