@@ -545,6 +545,7 @@ app.get("/admin/services", async (req, res) => {
 
 
 // Admin - Update service approval status
+// Admin - Update service status
 app.patch("/admin/services/:id/status", async (req, res) => {
     const { id } = req.params;
     const { approvalStatus } = req.body;
@@ -565,17 +566,6 @@ app.patch("/admin/services/:id/status", async (req, res) => {
         });
     }
 
-    const service = await services.findOne({
-        _id: new ObjectId(id),
-    });
-
-    if (!service) {
-        return res.status(404).send({
-            success: false,
-            message: "Service not found",
-        });
-    }
-
     const result = await services.updateOne(
         { _id: new ObjectId(id) },
         {
@@ -586,17 +576,17 @@ app.patch("/admin/services/:id/status", async (req, res) => {
         }
     );
 
-    if (result.modifiedCount === 0) {
-        return res.status(400).send({
-            success: false,
-            message: "Service status was not changed",
-        });
-    }
+    res.status(200).send(result);
+});
 
-    res.status(200).send({
-        success: true,
-        message: `Service ${approvalStatus} successfully`,
-    });
+// Admin - Get all bookings-page
+app.get("/admin/bookings", async (req, res) => {
+    const bookingsData = await bookings
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+    res.status(200).send(bookingsData);
 });
 
 
