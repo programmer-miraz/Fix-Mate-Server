@@ -599,6 +599,38 @@ app.get("/admin/transactions", async (req, res) => {
     res.status(200).send(transactionsData);
 });
 
+// Admin Dashboard Statistics
+app.get("/admin-dashboard", async (req, res) => {
+
+    const totalCustomers = await users.countDocuments({
+        role: "customer"
+    });
+
+    const totalTechnicians = await users.countDocuments({
+        role: "technician"
+    });
+
+    const pendingServices = await services.countDocuments({
+        approvalStatus: "pending"
+    });
+
+    const revenueData = await payments.aggregate([
+        { $match: { status: "paid" } },
+        {
+            $group: {
+                _id: null,
+                totalRevenue: { $sum: "$amount" }
+            }
+        }
+    ]).toArray();
+
+    res.send({
+        totalCustomers,
+        totalTechnicians,
+        pendingServices,
+        totalRevenue: revenueData[0]?.totalRevenue || 0
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}`);
