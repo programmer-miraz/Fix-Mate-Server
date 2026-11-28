@@ -589,6 +589,15 @@ app.get("/admin/bookings", async (req, res) => {
     res.status(200).send(bookingsData);
 });
 
+// Admin - Get all transactions
+app.get("/admin/transactions", async (req, res) => {
+    const transactionsData = await payments
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+    res.status(200).send(transactionsData);
+});
 
 
 app.listen(PORT, () => {
